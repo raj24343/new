@@ -1,0 +1,101 @@
+"use client";
+
+import { useState } from "react";
+import { signIn, getSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const result = await signIn("credentials", {
+      redirect: false,
+      email,
+      password,
+    });
+
+    if (result?.error) {
+      setError("Invalid email or password");
+      setLoading(false);
+      return;
+    }
+
+    // Fetch session after login to get the role
+    const session = await getSession();
+
+    if (!session?.user) {
+      setError("Something went wrong");
+      setLoading(false);
+      return;
+    }
+
+    // Role-based redirect
+    switch (session.user.role) {
+      case "SUPERADMIN":
+        router.push("/admin/super");
+        break;
+      case "SCHOOLADMIN":
+        router.push("/admin/school");
+        break;
+      case "TEACHER":
+        router.push("/");
+        break;
+      case "STUDENT":
+        router.push("/");
+        break;
+      default:
+        router.push("/unauthorized");
+    }
+
+    setLoading(false);
+  };
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <form
+        onSubmit={handleLogin}
+        className="bg-white shadow-md p-8 rounded-lg w-80"
+      >
+        <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
+
+        {error && (
+          <p className="text-red-600 mb-4 text-center">{error}</p>
+        )}
+
+        <input
+          type="email"
+          placeholder="Email"
+          className="w-full border p-2 rounded mb-4"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          className="w-full border p-2 rounded mb-4"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+        >
+          {loading ? "Logging in..." : "Login"}
+        </button>
+      </form>
+    </div>
+  );
+}
