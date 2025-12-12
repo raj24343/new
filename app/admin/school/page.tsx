@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getSession } from "next-auth/react";
+import Link from "next/link";
+import { div, form } from "framer-motion/client";
 
 type Role = "TEACHER" | "STUDENT";
 
@@ -51,7 +53,26 @@ export default function SignupPage() {
   };
 
   return (
+    <div>
+        <nav className="w-full bg-white shadow-sm border-b border-gray-200">
+      <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+        
+        {/* Left Side */}
+        <h1 className="text-2xl font-bold pt-0 text-green-600">logo</h1>
+
+        {/* Right Button */}
+        <Link
+          href="/school"
+          className="bg-green-600 text-white px-5 py-2 rounded-lg font-medium 
+                     hover:bg-green-700 transition-all duration-200"
+        >
+          School Details
+        </Link>
+        
+      </div>
+    </nav>
     <div className="flex flex-col items-center justify-center min-h-screen bg-green-50">
+    
       {/* Display logged-in SuperAdmin name */}
       {loggedInName && (
         <p className="mb-4 text-black font-semibold text-lg">
@@ -140,5 +161,7 @@ export default function SignupPage() {
         <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-green-300 rounded-full opacity-20 animate-pulse"></div>
       </form>
     </div>
+    </div>
+    
   );
 }
