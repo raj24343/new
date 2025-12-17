@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
-import prismaWrite from "@/lib/prisma-write"; // ✅ use primary for writes
+import prisma from "@/lib/db";
 
 export async function PUT(req: Request) {
   try {
@@ -15,7 +15,7 @@ export async function PUT(req: Request) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
 
     // Read user's schoolId from primary (optional: read from replica if acceptable)
-    const user = await prismaWrite.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: session.user.id },
     });
 
@@ -27,7 +27,7 @@ export async function PUT(req: Request) {
     }
 
     // ✅ UPDATE school on primary
-    const updated = await prismaWrite.school.update({
+    const updated = await prisma.school.update({
       where: { id: user.schoolId },
       data: { name, address, location },
     });

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
-import prismaRead from "@/lib/prisma-read";   // replica
-import prismaWrite from "@/lib/prisma-write"; // primary
+import prisma from "@/lib/db";
 
 export async function POST(req: Request) {
   try {
@@ -28,8 +27,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ READ from replica
-    const existingSchool = await prismaRead.school.findFirst({
+    // 🔹 Check if admin already has a school
+    const existingSchool = await prisma.school.findFirst({
       where: {
         admins: {
           some: { id: session.user.id },
@@ -48,8 +47,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ WRITE → PRIMARY
-    const school = await prismaWrite.school.create({
+    // 🔹 Create school
+    const school = await prisma.school.create({
       data: {
         name,
         address,
@@ -58,27 +57,22 @@ export async function POST(req: Request) {
           connect: { id: session.user.id },
         },
       },
-    });
-
-    // ⚠️ Immediate read-after-write → PRIMARY
-    const freshSchool = await prismaWrite.school.findUnique({
-      where: { id: school.id },
       include: { admins: true },
     });
 
-    // ➕ update user's schoolId
-    await prismaWrite.user.update({
+    // 🔹 Update user's schoolId
+    await prisma.user.update({
       where: { id: session.user.id },
-      data: { schoolId: freshSchool?.id },
+      data: { schoolId: school.id },
     });
 
     return NextResponse.json(
-      { message: "School created successfully", school: freshSchool },
+      { message: "School created successfully", school },
       { status: 201 }
     );
 
   } catch (error) {
-    console.error(error);
+    console.error("Create school error:", error);
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 }

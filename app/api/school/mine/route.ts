@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
-import prismaRead from "@/lib/prisma-read"; // use replica for reads
+import prisma from "@/lib/db";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -20,7 +20,7 @@ export async function GET() {
   }
 
   // ✅ READ from replica
-  const school = await prismaRead.school.findUnique({
+  const school = await prisma.school.findUnique({
     where: { id: schoolId },
   });
 

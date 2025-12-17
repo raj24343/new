@@ -1,5 +1,4 @@
-import prismaRead from "@/lib/prisma-read";
-import prismaWrite from "@/lib/prisma-write";
+import prisma from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
@@ -15,8 +14,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // ✅ READ → REPLICA
-    const existing = await prismaRead.user.findUnique({
+    // 🔹 Check existing user
+    const existing = await prisma.user.findUnique({
       where: { email },
     });
 
@@ -27,21 +26,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ WRITE → PRIMARY
-    const user = await prismaWrite.user.create({
+    // 🔹 Create user
+    const user = await prisma.user.create({
       data: {
         name,
         email,
-        password: hashed,
+        password: hashedPassword,
         role,
       },
-    });
-
-    // ⚠️ Read-after-write MUST use PRIMARY
-    const freshUser = await prismaWrite.user.findUnique({
-      where: { id: user.id },
       select: {
         id: true,
         name: true,
@@ -50,7 +44,7 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ user: freshUser }, { status: 201 });
+    return NextResponse.json({ user }, { status: 201 });
 
   } catch (error) {
     console.error("Signup error:", error);

@@ -1,12 +1,11 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import prismaWrite from "@/lib/prisma-write"; // primary
-// import prismaRead from "@/lib/prisma-read"; // optional for replica
+import prisma from "@/lib/db";
 import bcrypt from "bcrypt";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prismaWrite), // always primary
+  adapter: PrismaAdapter(prisma),
 
   providers: [
     CredentialsProvider({
@@ -19,15 +18,22 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        // For login, read from primary to avoid replica lag
-        const user = await prismaWrite.user.findUnique({
+        const user = await prisma.user.findUnique({
           where: { email: credentials.email },
-          include: { student: true, assignedClasses: true, school: true },
+          include: {
+            student: true,
+            assignedClasses: true,
+            school: true,
+          },
         });
 
         if (!user || !user.password) return null;
 
-        const isValid = await bcrypt.compare(credentials.password, user.password);
+        const isValid = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
+
         if (!isValid) return null;
 
         return {
@@ -37,13 +43,15 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           schoolId: user.schoolId,
           mobile: user.mobile,
-          studentId: user.student?.id || null,
+          studentId: user.student?.id ?? null,
         };
       },
     }),
   ],
 
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+  },
 
   callbacks: {
     async jwt({ token, user }) {
