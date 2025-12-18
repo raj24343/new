@@ -3,13 +3,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/db";
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
+type RouteParams =
+  | { params: { id: string } }
+  | { params: Promise<{ id: string }> };
 
-export async function GET(_req: Request, { params }: Params) {
+export async function GET(_req: Request, context: RouteParams) {
+  const resolved = "then" in context.params ? await context.params : context.params;
+  const id = resolved.id;
+
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
@@ -18,7 +19,7 @@ export async function GET(_req: Request, { params }: Params) {
 
   try {
     const fee = await prisma.studentFee.findUnique({
-      where: { studentId: params.id },
+      where: { studentId: id },
     });
 
     if (!fee) {
@@ -38,7 +39,10 @@ export async function GET(_req: Request, { params }: Params) {
   }
 }
 
-export async function PATCH(req: Request, { params }: Params) {
+export async function PATCH(req: Request, context: RouteParams) {
+  const resolved = "then" in context.params ? await context.params : context.params;
+  const id = resolved.id;
+
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
@@ -54,7 +58,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
   try {
     const existing = await prisma.studentFee.findUnique({
-      where: { studentId: params.id },
+      where: { studentId: id },
     });
 
     if (!existing) {
@@ -89,7 +93,7 @@ export async function PATCH(req: Request, { params }: Params) {
     const remainingFee = Math.max(finalFee - existing.amountPaid, 0);
 
     const updated = await prisma.studentFee.update({
-      where: { studentId: params.id },
+      where: { studentId: id },
       data: {
         totalFee: newTotalFee,
         discountPercent: newDiscount,
