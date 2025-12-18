@@ -47,6 +47,10 @@ model User {
   // News Feed
   newsFeedsCreated NewsFeed[] @relation("NewsFeedCreator")
 
+  // Communication
+  teacherAppointments Appointment[] @relation("TeacherAppointments")
+  sentMessages        ChatMessage[] @relation("MessageSender")
+
   // Certificates
   certificateTemplatesCreated CertificateTemplate[] @relation("CertificateTemplateCreator")
   certificatesIssued Certificate[] @relation("CertificateIssuer")
@@ -84,6 +88,7 @@ model School {
   certificates Certificate[]
   transferCertificates TransferCertificate[]
   studentHistories StudentHistory[]
+  appointments Appointment[]
 
   createdAt DateTime @default(now())
 
@@ -139,6 +144,11 @@ model Student {
   homeworkSubmissions HomeworkSubmission[]
   certificates       Certificate[]
   transferCertificates TransferCertificate[]
+  appointments       Appointment[] @relation("StudentAppointments")
+
+  // Payments / Fees
+  fee      StudentFee?
+  payments Payment[]
 
   createdAt DateTime @default(now())
 }
@@ -501,8 +511,8 @@ model Appointment {
   status      String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED", "COMPLETED"
   note        String?  @db.Text
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  teacher User    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  student Student @relation("StudentAppointments", fields: [studentId], references: [id], onDelete: Cascade)
+  teacher User    @relation("TeacherAppointments", fields: [teacherId], references: [id], onDelete: Cascade)
   school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   messages ChatMessage[]
@@ -524,9 +534,54 @@ model ChatMessage {
   createdAt     DateTime @default(now())
 
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  sender      User        @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  sender      User        @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([appointmentId])
   @@index([senderId])
+}
+
+// =====================
+// Fees & Payments
+// =====================
+
+model StudentFee {
+  id          String  @id @default(cuid())
+
+  studentId   String  @unique
+  student     Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  // Amounts are in INR
+  totalFee        Float          // Base fee before discount
+  discountPercent Float  @default(0)
+  finalFee        Float          // totalFee after applying discount
+
+  amountPaid      Float  @default(0)
+  remainingFee    Float
+
+  // How many installments student is allowed to pay in
+  installments    Int    @default(3)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([studentId])
+}
+
+model Payment {
+  id                String   @id @default(cuid())
+
+  studentId         String
+  student           Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  amount            Float
+
+  razorpayOrderId   String
+  razorpayPaymentId String
+  razorpaySignature String
+  status            String   @default("SUCCESS") // SUCCESS | FAILED | PENDING
+
+  createdAt         DateTime @default(now())
+
+  @@index([studentId])
 }
 

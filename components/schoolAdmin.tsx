@@ -37,6 +37,16 @@ export default function Home() {
               TC Requests & Approvals
             </div>
           </Link>
+          <Link href="/payments" className="block">
+            <div className="w-full py-4 rounded-2xl bg-emerald-500 text-white text-lg font-semibold text-center hover:bg-emerald-600 transition shadow-md">
+              Payments & Fees
+            </div>
+          </Link>
+          <Link href="/communication" className="block">
+            <div className="w-full py-4 rounded-2xl bg-teal-500 text-white text-lg font-semibold text-center hover:bg-teal-600 transition shadow-md">
+              Communication
+            </div>
+          </Link>
         </div>
         
 

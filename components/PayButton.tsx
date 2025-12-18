@@ -3,14 +3,22 @@
 import { CreditCard } from "lucide-react";
 import { motion } from "framer-motion";
 
-export default function PayButton({ amount }: { amount: number }) {
+interface PayButtonProps {
+  amount: number;
+  onSuccess?: () => void;
+}
+
+export default function PayButton({ amount, onSuccess }: PayButtonProps) {
   const payNow = async () => {
     try {
+      // Ensure amount sent to backend is at most 2 decimal places
+      const normalizedAmount = Number(amount.toFixed(2));
+
       // 1️⃣ Create order
       const res = await fetch("/api/payment/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({ amount: normalizedAmount }),
       });
 
       if (!res.ok) {
@@ -36,9 +44,37 @@ export default function PayButton({ amount }: { amount: number }) {
         order_id: order.id,
         name: "Timely Project",
         description: "Complete your payment",
-        handler: (response: any) => {
+        handler: async (response: any) => {
           console.log("Payment success", response);
-          alert("Payment successful!");
+
+          try {
+            const verifyRes = await fetch("/api/payment/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                amount: normalizedAmount,
+              }),
+            });
+
+            const data = await verifyRes.json();
+
+            if (!verifyRes.ok) {
+              console.error("Payment verification failed:", data);
+              alert(data.message || "Payment verification failed");
+              return;
+            }
+
+            alert("Payment successful!");
+            if (onSuccess) {
+              onSuccess();
+            }
+          } catch (err) {
+            console.error("Payment verification error:", err);
+            alert("Payment verification failed");
+          }
         },
         theme: { color: "#16a34a" },
       };

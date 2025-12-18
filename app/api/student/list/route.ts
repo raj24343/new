@@ -11,7 +11,22 @@ export async function GET() {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const schoolId = session.user.schoolId;
+    let schoolId = session.user.schoolId;
+
+    if (!schoolId) {
+      const adminSchool = await prisma.school.findFirst({
+        where: { admins: { some: { id: session.user.id } } },
+        select: { id: true },
+      });
+      schoolId = adminSchool?.id ?? null;
+
+      if (schoolId) {
+        await prisma.user.update({
+          where: { id: session.user.id },
+          data: { schoolId },
+        });
+      }
+    }
 
     if (!schoolId) {
       return NextResponse.json(

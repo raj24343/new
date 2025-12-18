@@ -90,7 +90,6 @@ export async function POST(req: Request) {
     }
 
     const userId = session.user.id;
-
     if (
       appointment.studentId !== session.user.studentId &&
       appointment.teacherId !== userId

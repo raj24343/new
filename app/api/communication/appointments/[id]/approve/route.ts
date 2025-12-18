@@ -3,29 +3,29 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/db";
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
+type ApproveParams =
+  | { params: { id: string } }
+  | { params: Promise<{ id: string }> };
 
-export async function POST(_req: Request, { params }: Params) {
+export async function POST(_req: Request, context: ApproveParams) {
+  const resolved = "then" in context.params ? await context.params : context.params;
+  const appointmentId = resolved.id;
+
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  if (session.user.role !== "TEACHER") {
-    return NextResponse.json(
-      { message: "Only teachers can approve appointments" },
-      { status: 403 }
-    );
-  }
+  const isTeacher = session.user.role === "TEACHER";
 
   try {
+    if (!appointmentId) {
+      return NextResponse.json({ message: "Appointment id missing" }, { status: 400 });
+    }
+
     const appointment = await prisma.appointment.findUnique({
-      where: { id: params.id },
+      where: { id: appointmentId },
     });
 
     if (!appointment) {
@@ -35,15 +35,17 @@ export async function POST(_req: Request, { params }: Params) {
       );
     }
 
-    if (appointment.teacherId !== session.user.id) {
+    const isOwnerTeacher = appointment.teacherId === session.user.id;
+
+    if (!isTeacher || !isOwnerTeacher) {
       return NextResponse.json(
-        { message: "You are not the teacher for this appointment" },
+        { message: "Only the assigned teacher can approve" },
         { status: 403 }
       );
     }
 
     const updated = await prisma.appointment.update({
-      where: { id: params.id },
+      where: { id: appointmentId },
       data: { status: "APPROVED" },
     });
 

@@ -13,7 +13,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const schoolId = session.user.schoolId;
+    let schoolId = session.user.schoolId;
+
+    // Fallback: find school where the admin belongs
+    if (!schoolId) {
+      const adminSchool = await prisma.school.findFirst({
+        where: { admins: { some: { id: session.user.id } } },
+        select: { id: true },
+      });
+      schoolId = adminSchool?.id ?? null;
+
+      if (schoolId) {
+        // persist the school on the user for future requests
+        await prisma.user.update({
+          where: { id: session.user.id },
+          data: { schoolId },
+        });
+      }
+    }
 
     if (!schoolId) {
       return NextResponse.json(
@@ -22,13 +39,38 @@ export async function POST(req: Request) {
       );
     }
 
-    const { name, email, fatherName, aadhaarNo, phoneNo, dob, classId, address } =
-      await req.json();
+    const {
+      name,
+      email,
+      fatherName,
+      aadhaarNo,
+      phoneNo,
+      dob,
+      classId,
+      address,
+      totalFee,
+      discountPercent,
+    } = await req.json();
 
     // Validate all required fields
     if (!name || !dob || !fatherName || !aadhaarNo || !phoneNo) {
       return NextResponse.json(
         { message: "Missing required fields: name, dob, fatherName, aadhaarNo, and phoneNo are required" },
+        { status: 400 }
+      );
+    }
+
+    if (typeof totalFee !== "number" || totalFee <= 0) {
+      return NextResponse.json(
+        { message: "totalFee must be a positive number" },
+        { status: 400 }
+      );
+    }
+
+    const safeDiscount = typeof discountPercent === "number" ? discountPercent : 0;
+    if (safeDiscount < 0 || safeDiscount > 100) {
+      return NextResponse.json(
+        { message: "discountPercent must be between 0 and 100" },
         { status: 400 }
       );
     }
@@ -65,6 +107,20 @@ export async function POST(req: Request) {
           include: {
             user: { select: { id: true, name: true, email: true } },
             class: true,
+          },
+        });
+
+        const finalFee = totalFee * (1 - safeDiscount / 100);
+
+        await tx.studentFee.create({
+          data: {
+            studentId: student.id,
+            totalFee,
+            discountPercent: safeDiscount,
+            finalFee,
+            amountPaid: 0,
+            remainingFee: finalFee,
+            installments: 3,
           },
         });
 

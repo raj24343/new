@@ -17,22 +17,22 @@ export async function GET() {
 
     let where: any = {};
 
-    if (role === "STUDENT") {
-      if (!session.user.studentId) {
-        return NextResponse.json(
-          { message: "Student profile not found" },
-          { status: 400 }
-        );
-      }
-      where.studentId = session.user.studentId;
-    } else if (role === "TEACHER") {
-      where.teacherId = userId;
-    } else {
+  if (role === "STUDENT") {
+    if (!session.user.studentId) {
       return NextResponse.json(
-        { message: "Only students and teachers can view appointments" },
-        { status: 403 }
+        { message: "Student profile not found" },
+        { status: 400 }
       );
     }
+    where.studentId = session.user.studentId;
+  } else if (role === "TEACHER") {
+    where.teacherId = userId;
+  } else {
+    return NextResponse.json(
+      { message: "Only students or teachers can view appointments" },
+      { status: 403 }
+    );
+  }
 
     const appointments = await prisma.appointment.findMany({
       where,

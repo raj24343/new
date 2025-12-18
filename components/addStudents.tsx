@@ -12,6 +12,8 @@ export default function AddStudentPage() {
     aadhaarNo: "",
     dob: "",
     address: "",
+    totalFee: "",
+    discountPercent: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,6 +27,24 @@ export default function AddStudentPage() {
       return;
     }
 
+    if (!form.totalFee) {
+      alert("Please enter the total fee for this student");
+      return;
+    }
+
+    const totalFee = Number(form.totalFee);
+    const discountPercent = form.discountPercent ? Number(form.discountPercent) : 0;
+
+    if (isNaN(totalFee) || totalFee <= 0) {
+      alert("Total fee must be a positive number");
+      return;
+    }
+
+    if (discountPercent < 0 || discountPercent > 100) {
+      alert("Discount percentage must be between 0 and 100");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -33,7 +53,11 @@ export default function AddStudentPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          totalFee,
+          discountPercent,
+        }),
       });
 
       const data = await res.json();
@@ -53,6 +77,8 @@ export default function AddStudentPage() {
         aadhaarNo: "",
         dob: "",
         address: "",
+        totalFee: "",
+        discountPercent: "",
       });
     } catch (err) {
       console.error(err);
@@ -162,6 +188,39 @@ export default function AddStudentPage() {
                 value={form.address}
                 onChange={handleChange}
                 placeholder="Student address"
+                className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+              />
+            </div>
+
+            {/** Total Fee */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">
+                Total Fee (₹) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                name="totalFee"
+                value={form.totalFee}
+                onChange={handleChange}
+                placeholder="e.g. 12000"
+                min={0}
+                className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+              />
+            </div>
+
+            {/** Discount Percent */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">
+                Discount (%) 
+              </label>
+              <input
+                type="number"
+                name="discountPercent"
+                value={form.discountPercent}
+                onChange={handleChange}
+                placeholder="e.g. 10"
+                min={0}
+                max={100}
                 className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
               />
             </div>

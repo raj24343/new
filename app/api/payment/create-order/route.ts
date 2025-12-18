@@ -9,15 +9,18 @@ const razorpay = new Razorpay({
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const amount = body.amount;
+    const rawAmount = body.amount;
 
-    if (!amount || isNaN(amount)) {
+    const amountNumber = typeof rawAmount === "string" ? parseFloat(rawAmount) : rawAmount;
+
+    if (!amountNumber || isNaN(amountNumber)) {
       return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
     }
 
     // Create order
     const order = await razorpay.orders.create({
-      amount: amount * 100, // amount in paise
+      // Razorpay expects amount in paise as an INTEGER
+      amount: Math.round(amountNumber * 100),
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
     });

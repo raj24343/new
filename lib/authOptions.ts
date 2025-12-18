@@ -89,10 +89,20 @@ export const authOptions: NextAuthOptions = {
     if (token.id && !token.schoolId) {
       const dbUser = await prisma.user.findUnique({
         where: { id: token.id as string },
-        select: { schoolId: true },
+        select: {
+          schoolId: true,
+          student: { select: { schoolId: true } },
+          adminSchools: { select: { id: true } },
+          teacherSchools: { select: { id: true } },
+        },
       });
 
-      token.schoolId = dbUser?.schoolId ?? null;
+      token.schoolId =
+        dbUser?.schoolId ??
+        dbUser?.student?.schoolId ??
+        dbUser?.adminSchools?.[0]?.id ??
+        dbUser?.teacherSchools?.[0]?.id ??
+        null;
     }
 
     return token;

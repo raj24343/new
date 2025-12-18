@@ -10,6 +10,7 @@ const actions = [
   { label: "Events", href: "/events" },
   { label: "Homeworks", href: "/homework" },
   { label: "News Feed", href: "/newsfeed" },
+  { label: "communication", href: "/communication" },
 ];
 
 export default function TeachersPage() {

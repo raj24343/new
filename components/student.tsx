@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import PayButton from "./PayButton";
 
 interface Mark {
   id: string;
@@ -80,6 +82,25 @@ interface TransferCertificate {
   createdAt: string;
 }
 
+interface StudentFee {
+  id: string;
+  totalFee: number;
+  discountPercent: number;
+  finalFee: number;
+  amountPaid: number;
+  remainingFee: number;
+  installments: number;
+}
+
+interface Appointment {
+  id: string;
+  status: string;
+  teacherId: string;
+  studentId: string;
+  note?: string | null;
+  requestedAt?: string;
+}
+
 export default function StudentDashboardPage() {
   const { data: session, status } = useSession();
   const [marks, setMarks] = useState<Mark[]>([]);
@@ -89,8 +110,10 @@ export default function StudentDashboardPage() {
   const [homeworks, setHomeworks] = useState<Homework[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [tc, setTc] = useState<TransferCertificate | null>(null);
+  const [fee, setFee] = useState<StudentFee | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "marks" | "attendance" | "events" | "newsfeed" | "homework" | "certificates" | "tc">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "marks" | "attendance" | "events" | "newsfeed" | "homework" | "certificates" | "tc" | "payments" | "communication">("overview");
 
   useEffect(() => {
     if (session && session.user.role === "STUDENT") {
@@ -109,11 +132,37 @@ export default function StudentDashboardPage() {
         fetchHomeworks(),
         fetchCertificates(),
         fetchTC(),
+        fetchFee(),
+        fetchAppointments(),
       ]);
     } catch (err) {
       console.error("Error fetching data:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFee = async () => {
+    try {
+      const res = await fetch("/api/fees/mine");
+      const data = await res.json();
+      if (res.ok && data.fee) {
+        setFee(data.fee);
+      }
+    } catch (err) {
+      console.error("Error fetching fee:", err);
+    }
+  };
+
+  const fetchAppointments = async () => {
+    try {
+      const res = await fetch("/api/communication/appointments");
+      const data = await res.json();
+      if (res.ok && data.appointments) {
+        setAppointments(data.appointments);
+      }
+    } catch (err) {
+      console.error("Error fetching appointments:", err);
     }
   };
 
@@ -395,6 +444,8 @@ export default function StudentDashboardPage() {
             { id: "events", label: "Events", icon: "🎉" },
             { id: "certificates", label: "Certificates", icon: "🏆" },
             { id: "tc", label: "TC", icon: "📄" },
+            { id: "payments", label: "Payments", icon: "💳" },
+            { id: "communication", label: "Communication", icon: "💬" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1106,6 +1157,142 @@ export default function StudentDashboardPage() {
                         View Certificate
                       </a>
                     )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Payments Tab */}
+        {activeTab === "payments" && (
+          <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-green-700">My Payments</h2>
+                <p className="text-gray-500 text-sm">Pay fees securely online</p>
+              </div>
+              <Link
+                href="/payments"
+                className="text-green-600 hover:text-green-700 text-sm font-medium"
+              >
+                Open full payment page →
+              </Link>
+            </div>
+
+            {fee ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-green-50 border border-green-100">
+                    <p className="text-sm text-gray-600">Payable (after discount)</p>
+                    <p className="text-3xl font-bold text-green-700 mt-2">₹{fee.finalFee}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
+                    <p className="text-sm text-gray-600">Paid so far</p>
+                    <p className="text-3xl font-bold text-blue-700 mt-2">₹{fee.amountPaid}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-amber-50 border border-amber-100">
+                    <p className="text-sm text-gray-600">Remaining</p>
+                    <p className="text-3xl font-bold text-amber-700 mt-2">₹{fee.remainingFee}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-purple-50 border border-purple-100">
+                    <p className="text-sm text-gray-600">Installments allowed</p>
+                    <p className="text-3xl font-bold text-purple-700 mt-2">{fee.installments}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>Progress</span>
+                    <span>
+                      ₹{fee.amountPaid.toFixed(2)} / ₹{fee.finalFee.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-2 bg-green-600"
+                      style={{
+                        width: `${Math.min((fee.amountPaid / fee.finalFee) * 100, 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {fee.remainingFee <= 0 ? (
+                  <div className="flex items-center gap-2 text-green-700 font-semibold">
+                    <span>✅</span> All fees paid. Thank you!
+                  </div>
+                ) : (
+                  <div className="max-w-sm">
+                    <PayButton amount={fee.remainingFee} onSuccess={fetchFee} />
+                    <p className="text-xs text-gray-500 mt-2">
+                      Need part-payment? Open the full page to pick installments.
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center text-gray-500 py-8">
+                Fee details not set. Please contact your school admin.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Communication Tab */}
+        {activeTab === "communication" && (
+          <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-green-700">Teacher Communication</h2>
+                <p className="text-gray-500 text-sm">
+                  View your appointment requests and jump into chat
+                </p>
+              </div>
+              <Link
+                href="/communication"
+                className="text-green-600 hover:text-green-700 text-sm font-medium"
+              >
+                Open chat →
+              </Link>
+            </div>
+
+            {appointments.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                No appointments yet. Contact your teacher from the chat page.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {appointments.map((appt) => (
+                  <div
+                    key={appt.id}
+                    className="p-4 rounded-xl border border-gray-200 flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="font-semibold text-gray-800">
+                        Appointment #{appt.id.slice(0, 6)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Requested:{" "}
+                        {appt.requestedAt
+                          ? new Date(appt.requestedAt).toLocaleString()
+                          : "Not set"}
+                      </p>
+                      {appt.note && (
+                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">{appt.note}</p>
+                      )}
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        appt.status === "APPROVED"
+                          ? "bg-green-100 text-green-800"
+                          : appt.status === "REJECTED"
+                          ? "bg-red-100 text-red-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      {appt.status}
+                    </span>
                   </div>
                 ))}
               </div>

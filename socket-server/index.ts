@@ -13,12 +13,12 @@ io.on("connection", (socket) => {
     socket.join(roomId);
   });
 
-  socket.on(
-    "send-message",
-    ({ roomId, message }: { roomId: string; message: string }) => {
-      io.to(roomId).emit("receive-message", message);
-    }
-  );
+socket.on(
+  "send-message",
+  ({ roomId, message }: { roomId: string; message: any }) => {
+    io.to(roomId).emit("receive-message", message);
+  }
+);
 
   socket.on("disconnect", () => {
     console.log("Disconnected:", socket.id);
