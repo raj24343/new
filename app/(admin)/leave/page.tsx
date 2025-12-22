@@ -65,7 +65,6 @@ export default function AdminLeavesPage() {
               <th className="p-3 border-b">From</th>
               <th className="p-3 border-b">To</th>
               <th className="p-3 border-b">Status</th>
-              <th className="p-3 border-b">Remarks</th>
               <th className="p-3 border-b">Actions</th>
             </tr>
           </thead>
@@ -92,7 +91,6 @@ export default function AdminLeavesPage() {
                     {l.status}
                   </span>
                 </td>
-                <td className="p-3 border-b">{l.remarks || "-"}</td>
                 <td className="p-3 border-b space-y-2">
                   {l.status === "PENDING" && (
                     <>
@@ -102,14 +100,7 @@ export default function AdminLeavesPage() {
                       >
                         Approve
                       </button>
-                      <input
-                        value={remarksMap[l.id] || ""}
-                        onChange={e =>
-                          setRemarksMap(prev => ({ ...prev, [l.id]: e.target.value }))
-                        }
-                        placeholder="Remarks"
-                        className="border rounded px-2 py-1 w-full text-sm"
-                      />
+                  
                       <button
                         onClick={() => reject(l.id)}
                         className="w-full bg-red-600 text-white rounded px-3 py-1 hover:bg-red-700 transition"
